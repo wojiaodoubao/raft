@@ -4,6 +4,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import raft.Configuration;
 import raft.LogQueue;
 import raft.RaftNode;
 import raft.Time;
@@ -21,7 +22,9 @@ public class JsonRaftClient extends RaftNode {
   InetSocketAddress socketAddress;
   private static Logger LOG = LoggerFactory.getLogger(JsonRaftClient.class);
 
-  public JsonRaftClient(String ip, int port, int id) throws IOException {
+  public JsonRaftClient(int id, Configuration conf) throws IOException {
+    String ip = conf.get(id +".ip");
+    int port = Integer.parseInt(conf.get(id+".port"));
     socketAddress = new InetSocketAddress(ip, port);
     this.id = id;
   }
@@ -211,5 +214,13 @@ public class JsonRaftClient extends RaftNode {
     if (e != null) {
       throw e;
     }
+  }
+
+  public static RaftNode[] getRaftClient(Configuration conf) throws IOException {
+    JsonRaftClient[] nodes = new JsonRaftClient[3];
+    for (int i = 0; i < 3; i++) {
+      nodes[i] = new JsonRaftClient(i, conf);
+    }
+    return nodes;
   }
 }

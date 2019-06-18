@@ -72,10 +72,8 @@ public class RaftClientShell {
       items[i - 1] = args[i];
     }
 
-    JsonRaftClient[] nodes = new JsonRaftClient[3];
-    for (int i = 0; i < 3; i++) {
-      nodes[i] = new JsonRaftClient("localhost", 9990 + i, i);
-    }
+    Configuration conf = new Configuration();
+    RaftNode[] nodes = JsonRaftClient.getRaftClient(conf);
     if (command.equals("set")) {
       System.out.println(new RaftClientShell(nodes).set(items[0], items[1]));
     } else if (command.equals("get")) {

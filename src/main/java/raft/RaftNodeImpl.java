@@ -31,9 +31,9 @@ public class RaftNodeImpl extends RaftNode implements Runnable {
   Logger LOG = LoggerFactory.getLogger(RaftNodeImpl.class);
   InetSocketAddress socketAddress;
 
-  final int LEADER_ELECTION_TIMEOUT = 1000;
-  final int HEART_BEAT_TIMEOUT = 500;
-  final int RPC_TIMEOUT = 500;
+  final int LEADER_ELECTION_TIMEOUT;
+  final int HEART_BEAT_TIMEOUT;
+  final int RPC_TIMEOUT;
   String logFile;
   HashMap<String,String> map = new HashMap<>();
   LogQueue logQueue = null;
@@ -61,10 +61,16 @@ public class RaftNodeImpl extends RaftNode implements Runnable {
   // Vote
   RaftNode voteTo;
 
-  public RaftNodeImpl(String ip, int port, int id, String logFile) throws IOException {
+  public RaftNodeImpl(int id, Configuration conf) throws IOException {
+    LEADER_ELECTION_TIMEOUT = Integer.parseInt(conf.get("leader.election.timeout"));
+    HEART_BEAT_TIMEOUT = Integer.parseInt(conf.get("heart.beat.timeout"));
+    RPC_TIMEOUT = Integer.parseInt(conf.get("rpc.timeout"));
+
+    String ip = conf.get(id +".ip");
+    int port = Integer.parseInt(conf.get(id+".port"));
     socketAddress = new InetSocketAddress(ip, port);
     this.id = id;
-    this.logFile = logFile;
+    this.logFile = conf.get(id+".log");
   }
 
   public void init(RaftNode[] nodes) throws IOException {
