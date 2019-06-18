@@ -10,8 +10,7 @@ Raft程序设计思想
 3. Acceptor工作模式：
 **响应requestVote：**
 * 如果收到requestVote时Acceptor不是LOOK状态的话，就检查一下票的electionTerm，如果小于等于自己的electionTerm的话说明是个过期票，直接返回false；否则将自己转成LOOK状态，后续处理就和收到时已经是LOOK状态一样了；
-* Proposer传递来了它记录的最后一个LogEntry的term & lid，Acceptor比较如果自己的term * lid更大，就投反对票，如果对方大于等于自己就投赞成票；投赞成票后这个投票要保持LEADER_ELECTION_TIMEOUT，这期间收到其他requestVote也不会改自己的票，详细内容参考Raft变票部分的说明；
-**响应appendEntries：**
+* Proposer传递来了它记录的最后一个LogEntry的term & lid，Acceptor比较如果自己的term * lid更大，就投反对票，如果对方大于等于自己就投赞成票；投赞成票后这个投票要保持LEADER_ELECTION_TIMEOUT，这期间收到其他requestVote也不会改自己的票，详细内容参考Raft变票部分的说明； **响应appendEntries：**
 * 收到appendEntries说明leader已经产生，进入Follower状态，更新自己的electionTerm；
 * 将收到的logPre与自己记录的所有log进行比较，如果自己的log中找不到logPre就返回false；找到的话就将logPre后面部分截断，并在logPre后接上log；除了内存修改这里也要做持久化的内容，包括对日志文件的truncate；如果有truncate发生，就清空map，并重放日志（为了保证日志重放不花费太长时间，要让集群经常做snapshot）；
 **响应setKeyValue：**
@@ -22,6 +21,16 @@ Raft程序设计思想
 
 4. Raft在选举过程不会变票，即任何Acceptor在给一个Proposer投票后，都将保持LEADER_ELECTION_TIMEOUT这么长时间不变票；如果超过了这个时间还没有leader出现，说明上一次选举中产生了分票情况，这时候就可以放弃掉之前的投票准备投给新的Proposer；当然上一轮的选举可能在LEADER_ELECTION_TIMEOUT之前就已经结束了，但是我们这里只要保证结束即可，时间落后一些是无所谓的；下一轮选举开始前的那段随机回退，可以保证下一轮的第一个Proposer发起的投票，在上一轮最后一个Acceptor经过LEADER_ELECTION_TIMEOUT之后（通过设置超时时间和随机回退策略来实现）。
 
-5. TODO
+5. 对于Raft Client的保证：
+* 如果setKeyValue()返回了成功，那么一定被成功commit，所有人都能看到它被commit；
+* 如果setKeyValue()返回了失败，那么一定不会被commit，所有人都不会看到它被commit；
+* 如果setKeyValue()超时，那么行为就是未定义的，需要client自行确认；
+
+6. 其他：
+* 每一次选举都有一个electionTerm，不论是否选出了leader；
+* electionTerm保留在内存中，启动的时候term就是从盘里commit序列里找到的最大term，如果没有文件就初始化为0；之后随着选举term变大；
+* 因为不会变票所以永远只会有一个Proposer asks others to follow；
+
+7. TODO
 * snapshot；
 * 节点替换；
